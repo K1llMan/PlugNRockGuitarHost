@@ -9,6 +9,9 @@ namespace PlugNRockGuitarHost.Effects.NoteDetector
         protected ConcurrentQueue<float> ringBuffer = new();
         protected CancellationTokenSource tokenSource;
 
+        private bool isNoiseGateOpen;
+        private int noiseGateHold;
+
         #endregion Поля
 
         #region Свойства
@@ -16,6 +19,8 @@ namespace PlugNRockGuitarHost.Effects.NoteDetector
         public List<int> MidiNotes { get; protected set; } = new();
 
         public List<string> Notes => MidiNotes.Select(INoteDetector.GetNoteName).ToList();
+
+        public float NoiseGateThreshold { get; set; } = DbToLinear(-80f);
 
         #endregion Свойства
 
@@ -26,6 +31,8 @@ namespace PlugNRockGuitarHost.Effects.NoteDetector
         #endregion События
 
         #region Вспомогательные функции
+
+        protected static float DbToLinear(float db) => (float)Math.Pow(10.0, db / 20.0);
 
         protected void SlideWindow(in float[] slidingWindow, int slideSize)
         {
@@ -39,9 +46,11 @@ namespace PlugNRockGuitarHost.Effects.NoteDetector
 
         protected bool NoiseGate(float[] window)
         {
+            if (window.Length == 0)
+                return true;
+
             // Проверка громкости (Noise Gate)
-            float rms = (float)Math.Sqrt(window.Average(x => x * x));
-            bool isSilence = rms < 0.005f;
+            bool isSilence = (float)Math.Sqrt(window.Average(x => x * x)) < NoiseGateThreshold;
 
             // Очистка списка нот при наступлении тишины
             if (isSilence && MidiNotes.Count > 0)
@@ -66,7 +75,6 @@ namespace PlugNRockGuitarHost.Effects.NoteDetector
         }
 
         #endregion Основные функции
-
 
         #region IDisposable
 

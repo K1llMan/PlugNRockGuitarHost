@@ -84,7 +84,7 @@ namespace PlugNRockGuitarHost.Effects.NoteDetector
                 return;
 
             HashSet<int> detectedMidiNotes = new();
-            float threshold = maxMagnitude * 0.4f; // Отсекаем тихие призвуки (22% от главного пика)
+            float threshold = maxMagnitude * 0.22f; // Отсекаем тихие призвуки (22% от главного пика)
 
             // 4. Итеративно ищем до 6 нот (по числу струн)
             for (int iter = 0; iter < 6; iter++)

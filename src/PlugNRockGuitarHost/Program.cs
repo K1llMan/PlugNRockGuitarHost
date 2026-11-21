@@ -6,10 +6,17 @@ namespace PlugNRockGuitarHost
 {
     internal class Program
     {
-        private static float volume = 0.5f;
+        private static float volume = 1.0f;
+        private static float balance = 0.0f;
         private static int semitones = 0;
 
         private static Dictionary<ConsoleKey, Action<ConsoleKey>> actions = new();
+
+        private static void AddActions(IEnumerable<ConsoleKey> keys, Action<ConsoleKey> action)
+        {
+            foreach (ConsoleKey key in keys) 
+                actions.TryAdd(key, action);
+        }
 
         private static IProcessorEffect InitNoteDetector()
         {
@@ -29,19 +36,16 @@ namespace PlugNRockGuitarHost
 
             Action<ConsoleKey> pitch = key => {
                 if (key == ConsoleKey.OemPlus || key == ConsoleKey.Add)
-                    semitones++;
+                    semitones = Math.Min(++semitones, 12);
                 else if (key == ConsoleKey.OemMinus || key == ConsoleKey.Subtract)
-                    semitones--;
+                    semitones = Math.Max(--semitones, -12);
 
                 shifter.SetPitch(semitones);
 
                 Console.WriteLine($"Pitch shift: {semitones}");
             };
 
-            actions.Add(ConsoleKey.OemPlus, pitch);
-            actions.Add(ConsoleKey.Add, pitch);
-            actions.Add(ConsoleKey.OemMinus, pitch);
-            actions.Add(ConsoleKey.Subtract, pitch);
+            AddActions(new[] { ConsoleKey.OemPlus, ConsoleKey.Add, ConsoleKey.OemMinus, ConsoleKey.Subtract }, pitch);
 
             return shifter;
         }
@@ -54,7 +58,9 @@ namespace PlugNRockGuitarHost
                     ModelPath = @"c:\2\nam\BOG UU II Gain BAL CAB.nam"
                 }},
                 { "Clean", new() {
-                    ModelPath = @"c:\2\nam\TL LUSH CLEAN.nam"
+                    ModelPath = @"c:\2\nam\TL LUSH CLEAN.nam",
+                    //CabinetImpulse = @"c:\2\nam\Electrical Audio Centerfield Room MONO.wav",
+                    OutputGain = 1.5f
                 }},
             });
             nam.SetEffect("Dist");
@@ -66,12 +72,39 @@ namespace PlugNRockGuitarHost
                     nam.SetEffect("Dist");
             };
 
-            actions.Add(ConsoleKey.D1, changeEffect);
-            actions.Add(ConsoleKey.D2, changeEffect);
+            AddActions(new[] { ConsoleKey.D1, ConsoleKey.D2 }, changeEffect);
 
             return nam;
         }
 
+        private static IProcessorEffect InitVolumeControl()
+        {
+            VolumeControl control = new() {
+                Balance = balance,
+                Volume = volume
+            };
+
+            Action<ConsoleKey> changeVolume = key => {
+                if (key == ConsoleKey.LeftArrow)
+                    balance = Math.Max(balance - 0.1f, -1.0f);
+                if (key == ConsoleKey.RightArrow)
+                    balance = Math.Min(balance + 0.1f, 1.0f);
+
+                if (key == ConsoleKey.UpArrow)
+                    volume = Math.Min(volume + 0.1f, 1.0f);
+                if (key == ConsoleKey.DownArrow)
+                    volume = Math.Max(volume - 0.1f, -1.0f);
+
+                control.Balance = balance;
+                control.Volume = volume;
+
+                Console.WriteLine($"Volume: {volume}, balance: {balance}");
+            };
+
+            AddActions(new [] { ConsoleKey.LeftArrow, ConsoleKey.RightArrow, ConsoleKey.UpArrow, ConsoleKey.DownArrow }, changeVolume);
+
+            return control;
+        }
 
         private static void KeyActions(ConsoleKey key)
         {
@@ -100,6 +133,7 @@ namespace PlugNRockGuitarHost
             processor.AddEffect(InitNoteDetector());
             processor.AddEffect(InitPitchShifter());
             processor.AddEffect(InitNAM());
+            processor.AddEffect(InitVolumeControl());
 
             processor.Start();
             Console.WriteLine("Управление: '+' громче, '-' тише, Enter — выход.");

@@ -1,6 +1,7 @@
 ﻿using NAudio.Effects;
 using NAudio.Nam;
 using NAudio.Wave;
+
 using PlugNRockGuitarHost.Models;
 
 namespace PlugNRockGuitarHost.Effects
@@ -8,16 +9,27 @@ namespace PlugNRockGuitarHost.Effects
     public class NAM : IProcessorEffect
     {
         #region Поля
+
+        // Целевой уровень громкости (в стандартном плагине NAM обычно -18.0 дБ)
+        private const float DefaultTargetLoudnessDb = -12.0f;
+
+        #region Сглаживание переключения
+
         private static int fadeMs = 15;
         private static int fadeSamples = (int) (Consts.SampleRate * (fadeMs / 1000f));
-
         private int fadePosition = 0;
+
+        #endregion Сглаживание переключения
+
+        #region Переключение эффектов
 
         private delegate void EffectDelegate(ReadOnlySpan<float> input, in Span<float> left, in Span<float> right);
 
         private Dictionary<string, EffectDelegate> effects = new();
         private EffectDelegate? currentEffect;
         private EffectDelegate? nextEffect;
+
+        #endregion Переключение эффектов
 
         #endregion Поля
 
@@ -74,6 +86,26 @@ namespace PlugNRockGuitarHost.Effects
             }
         }
 
+        /// <summary>
+        /// Возвращает линейный множитель выходного гейна для нормализации громкости модели.
+        /// </summary>
+        public static float CalculateOutputGainLinear(NamModel model, float targetLoudnessDb = DefaultTargetLoudnessDb, float userTrimDb = 0.0f)
+        {
+            float compensationDb = 0.0f;
+
+            if (model.Metadata.Loudness is { } modelLoudness)
+            {
+                // Вычисляем разницу между целевой громкостью и громкостью модели
+                compensationDb = targetLoudnessDb - (float)modelLoudness;
+
+                // Защита от экстремальных значений в битых файлах
+                compensationDb = Math.Clamp(compensationDb, -36.0f, 36.0f);
+            }
+
+            float totalDb = compensationDb + userTrimDb;
+            return MathF.Pow(10f, totalDb / 20f);
+        }
+
         #endregion Вспомогательные функции
 
         #region Основные функции
@@ -101,22 +133,33 @@ namespace PlugNRockGuitarHost.Effects
             effects = options
                 .Where(o => File.Exists(o.Value.ModelPath))
                 .ToDictionary(o => o.Key, o => {
+                    Span<float> empty = new float[1024];
+
                     NAMDescriptor desc = o.Value;
                     NamModel model = NamModel.Load(desc.ModelPath);
-                    NamProcessor processor = model.CreateProcessor(0.0f);
+                    NamProcessor processor = model.CreateProcessor();
+                    processor.Process(empty, empty);
+                    
+                    float outputGain = CalculateOutputGainLinear(model) * desc.OutputGain;
 
-                    CabinetEffect cabinet = null;
                     // Есть файл импульса и модель без кабинета
-                    if (File.Exists(desc.CabinetImpulse) && !model.Metadata.GearType.Contains("cab"))
+                    CabinetEffect cabinet = null;
+                    if (File.Exists(desc.CabinetImpulse))
                     {
                         cabinet = new();
                         cabinet.LoadImpulseResponse(desc.CabinetImpulse);
                         cabinet.Configure(WaveFormat.CreateIeeeFloatWaveFormat(Consts.SampleRate, 1));
+                        // Прогрев, чтобы не было щёлчков
+                        cabinet.Process(empty);
                     }
 
                     return new EffectDelegate((input, in left, in right) => {
                         processor.Process(left, left);
                         cabinet?.Process(left);
+
+                        // Корректируем выходную громкость
+                        for (int i = 0; i < left.Length; i++)
+                            left[i] *= outputGain;
 
                         left.CopyTo(right);
                     });
