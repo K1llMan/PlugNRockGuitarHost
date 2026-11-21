@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "PlugNRockGuitarHost": {
+      "commandName": "Project",
+      "debugEngines": "managed,native"
+    }
+  }
+}
