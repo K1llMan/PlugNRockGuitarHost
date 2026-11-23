@@ -1,16 +1,13 @@
 ﻿using System.Collections.Concurrent;
 
-namespace PlugNRockGuitarHost.Effects.NoteDetector
+namespace PlugNRockGuitarHost.Processor.Effects.NoteDetector
 {
-    public abstract class BasicNoteDetector : INoteDetector
+    public abstract class BasicNoteDetector : BasicEffect, INoteDetector
     {
         #region Поля
 
         protected ConcurrentQueue<float> ringBuffer = new();
         protected CancellationTokenSource tokenSource;
-
-        private bool isNoiseGateOpen;
-        private int noiseGateHold;
 
         #endregion Поля
 
@@ -63,11 +60,6 @@ namespace PlugNRockGuitarHost.Effects.NoteDetector
 
         #region Основные функции
 
-        public virtual void Process(ReadOnlySpan<float> input, in Span<float> left, in Span<float> right)
-        {
-            throw new NotImplementedException();
-        }
-
         protected void ChangeNotes(List<int> notes)
         {
             MidiNotes = notes;
@@ -78,7 +70,7 @@ namespace PlugNRockGuitarHost.Effects.NoteDetector
 
         #region IDisposable
 
-        public virtual void Dispose()
+        public override void Dispose()
         {
             tokenSource.Cancel(false);
         }

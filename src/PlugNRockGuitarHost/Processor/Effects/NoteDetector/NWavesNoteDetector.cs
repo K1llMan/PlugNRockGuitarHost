@@ -2,7 +2,7 @@
 using NWaves.Transforms;
 using NWaves.Windows;
 
-namespace PlugNRockGuitarHost.Effects.NoteDetector
+namespace PlugNRockGuitarHost.Processor.Effects.NoteDetector
 {
     public class NWavesNoteDetector : BasicNoteDetector
     {

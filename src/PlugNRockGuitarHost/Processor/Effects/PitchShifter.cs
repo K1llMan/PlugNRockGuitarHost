@@ -1,8 +1,8 @@
 ﻿using RubberBandSharp;
 
-namespace PlugNRockGuitarHost.Effects
+namespace PlugNRockGuitarHost.Processor.Effects
 {
-    public class PitchShifter : IProcessorEffect
+    public class PitchShifter : BasicEffect
     {
         #region Поля
 
@@ -10,7 +10,6 @@ namespace PlugNRockGuitarHost.Effects
         private int pitchSemitones = 0;
 
         #endregion Поля
-
 
         #region Основные функции
 
@@ -30,7 +29,7 @@ namespace PlugNRockGuitarHost.Effects
             );
         }
 
-        public void Process(ReadOnlySpan<float> input, in Span<float> left, in Span<float> right)
+        public override void Process(ReadOnlySpan<float> input, in Span<float> left, in Span<float> right)
         {
             stretcher.Process(left, (uint)input.Length, false);
 
@@ -55,13 +54,5 @@ namespace PlugNRockGuitarHost.Effects
         }
 
         #endregion Основные функции
-
-        #region IDisposable
-
-        public void Dispose()
-        {
-        }
-
-        #endregion IDisposable
     }
 }

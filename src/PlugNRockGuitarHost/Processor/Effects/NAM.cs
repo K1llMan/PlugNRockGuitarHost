@@ -2,11 +2,11 @@
 using NAudio.Nam;
 using NAudio.Wave;
 
-using PlugNRockGuitarHost.Models;
+using PlugNRockGuitarHost.Processor.Models;
 
-namespace PlugNRockGuitarHost.Effects
+namespace PlugNRockGuitarHost.Processor.Effects
 {
-    public class NAM : IProcessorEffect
+    public class NAM : BasicEffect
     {
         #region Поля
 
@@ -110,7 +110,7 @@ namespace PlugNRockGuitarHost.Effects
 
         #region Основные функции
 
-        public void Process(ReadOnlySpan<float> input, in Span<float> left, in Span<float> right)
+        public override void Process(ReadOnlySpan<float> input, in Span<float> left, in Span<float> right)
         {
             if (nextEffect != null)
                 if (currentEffect == null)
@@ -130,6 +130,8 @@ namespace PlugNRockGuitarHost.Effects
 
         public void Init(Dictionary<string, NAMDescriptor> options)
         {
+            currentEffect = null;
+
             effects = options
                 .Where(o => File.Exists(o.Value.ModelPath))
                 .ToDictionary(o => o.Key, o => {
@@ -172,14 +174,5 @@ namespace PlugNRockGuitarHost.Effects
         }
 
         #endregion Основные функции
-
-        #region IDisposable
-
-        public void Dispose()
-        {
-
-        }
-
-        #endregion IDisposable
     }
 }

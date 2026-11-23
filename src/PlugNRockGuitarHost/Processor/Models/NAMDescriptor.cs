@@ -1,4 +1,4 @@
-﻿namespace PlugNRockGuitarHost.Models
+﻿namespace PlugNRockGuitarHost.Processor.Models
 {
     public class NAMDescriptor
     {

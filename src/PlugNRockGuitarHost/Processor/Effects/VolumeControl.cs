@@ -1,6 +1,6 @@
-﻿namespace PlugNRockGuitarHost.Effects
+﻿namespace PlugNRockGuitarHost.Processor.Effects
 {
-    public class VolumeControl : IProcessorEffect
+    public class VolumeControl : BasicEffect
     {
         #region Свойства
 
@@ -11,7 +11,7 @@
 
         #region Основные функции
 
-        public void Process(ReadOnlySpan<float> input, in Span<float> left, in Span<float> right)
+        public override void Process(ReadOnlySpan<float> input, in Span<float> left, in Span<float> right)
         {
             float leftGain = Volume * (Balance > 0f ? 1.0f - Balance : 1.0f);
             float rightGain = Volume * (Balance < 0f ? 1.0f + Balance : 1.0f);
@@ -25,14 +25,5 @@
 
 
         #endregion Основные функции
-
-        #region IDisposable
-
-        public void Dispose()
-        {
-        }
-
-        #endregion IDisposable
-
     }
 }

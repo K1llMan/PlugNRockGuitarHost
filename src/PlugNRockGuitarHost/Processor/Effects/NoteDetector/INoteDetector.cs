@@ -1,4 +1,4 @@
-﻿namespace PlugNRockGuitarHost.Effects.NoteDetector
+﻿namespace PlugNRockGuitarHost.Processor.Effects.NoteDetector
 {
     public class NotesChangedEventArgs : EventArgs
     {

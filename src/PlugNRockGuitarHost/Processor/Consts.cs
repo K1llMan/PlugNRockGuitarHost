@@ -1,4 +1,4 @@
-﻿namespace PlugNRockGuitarHost
+﻿namespace PlugNRockGuitarHost.Processor
 {
     public class Consts
     {

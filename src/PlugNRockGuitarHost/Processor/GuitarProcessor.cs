@@ -1,8 +1,8 @@
 ﻿using NAudio.Wave;
 
-using PlugNRockGuitarHost.Effects;
+using PlugNRockGuitarHost.Processor.Effects;
 
-namespace PlugNRockGuitarHost
+namespace PlugNRockGuitarHost.Processor
 {
     public class GuitarProcessor: IDisposable
     {
@@ -34,7 +34,8 @@ namespace PlugNRockGuitarHost
             input.CopyTo(right);
 
             foreach (IProcessorEffect effect in effects)
-                effect.Process(input, left, right);
+                if (effect.Enabled)
+                    effect.Process(input, left, right);
         }
 
         #endregion Вспомогательные функции
@@ -50,8 +51,7 @@ namespace PlugNRockGuitarHost
         {
             Device = AsioDevice.Open(driverName);
 
-            Device.InitDuplex(new AsioDuplexOptions
-            {
+            Device.InitDuplex(new AsioDuplexOptions {
                 // Индекс физического входа (0 = Input 1, 1 = Input 2)
                 InputChannels = [0],
 

@@ -1,11 +1,14 @@
-﻿using Microsoft.ML.OnnxRuntime;
+﻿using System.Runtime.InteropServices;
+
+using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
+
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
-using System.Runtime.InteropServices;
 
-namespace PlugNRockGuitarHost.Effects.NoteDetector
+namespace PlugNRockGuitarHost.Processor.Effects.NoteDetector
 {
+    #warning Basic pitch, отключён из сборки тащит много библиотек за собой
     public class BasicPitchNoteDetector : BasicNoteDetector
     {
         #region Поля

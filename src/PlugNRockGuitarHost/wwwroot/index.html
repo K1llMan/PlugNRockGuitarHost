@@ -1,0 +1,213 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket Тест</title>
+    <script src="./js/msgpack.min.js"></script>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%; /* Базовая высота для наследования */
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            flex-flow: column;
+            font-family: sans-serif;
+            padding: 20px;
+        }
+
+        .workArea {
+            display: flex;
+            flex-grow: 1;
+            gap: 20px; /* Отступ между левой и правой половинами */
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Настройка равной ширины (50% / 50%) для обеих половин */
+        .left-panel,
+        #commands {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px; /* Отступ между элементами внутри колонок */
+        }
+
+        /* Растягиваем текстовое поле на всю ширину левой колонки */
+        #msgInput {
+            width: 100%;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+
+        /* Стили для блока логов */
+        #log {
+            border: 1px solid #ccc;
+            padding: 10px;
+            min-height: 150px;
+            overflow-y: auto;
+            flex-grow: 1; /* Занимает оставшееся свободное место по высоте */
+        }
+
+        /* Стили для правого блока с командами */
+        #commands {
+            border: 1px solid #eee;
+            padding: 10px;
+            align-items: stretch; /* Кнопки внутри будут растягиваться на всю ширину блока */
+        }
+
+        #log_old {
+            border: 1px solid #ccc;
+            height: 250px;
+            overflow-y: auto;
+            padding: 10px;
+            margin-bottom: 10px;
+            background: #f9f9f9;
+        }
+
+        .row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        textarea_old {
+            flex: 1;
+            padding: 6px;
+        }
+
+        button {
+            padding: 6px 12px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+<h2>WebSocket Клиент</h2>
+    <div class="workArea">
+        <!-- Левая половина: кнопки управления, ввод и лог -->
+        <div class="left-panel">
+            <div class="row">
+                <button id="btnConnect" onclick="connect()">Подключиться</button>
+                <button id="btnDisconnect" onclick="disconnect()" disabled>Отключиться</button>
+                <button id="btnSend" onclick="sendMsg()" disabled>Отправить</button>
+            </div>
+            <div class="row">
+                <textarea rows="15" cols="30" id="msgInput" disabled></textarea>
+            </div>
+            <div id="log"></div>
+        </div>
+
+        <!-- Правая половина: контейнер для динамических кнопок команд -->
+        <div id="commands" class="row">
+            <!-- Кнопки будут добавляться сюда через JS -->
+        </div>
+    </div>
+
+    <script>
+        let commands = [
+            { "type": "drivers", "parameters": null },
+            { "type": "initProcessor", "parameters": "Focusrite USB ASIO" },
+            { "type": "startProcessor", "parameters": null },
+            { "type": "stopProcessor", "parameters": null },
+            { "type": "setPitch", "parameters": -2 },
+            { "type": "initNAM", "parameters": {
+                    "Dist": { "ModelPath": "c:/2/nam/BOG UU II Gain BAL CAB.nam" },
+                    "Clean": { "ModelPath": "c:/2/nam/TL LUSH CLEAN.nam", "OutputGain": 1.5 },
+            }
+            },
+            { "type": "setNAMEffect", "parameters": "Dist" },
+            { "type": "setVolume", "parameters": 0.5 },
+            { "type": "setVolumeBalance", "parameters": 0.5 },
+        ];
+
+        const commandRow = document.getElementById("commands");
+
+        commands.forEach(c => {
+            const button = document.createElement('button');
+            button.textContent = c.type;
+            button.addEventListener('click', () => {
+                sendMsg(c);
+            });
+            commandRow.append(button);
+        })
+
+        let ws;
+        const logDiv = document.getElementById("log");
+        const msgInput = document.getElementById("msgInput");
+
+        msgInput.value = JSON.stringify(commands[1]);
+
+        function log(text) {
+            logDiv.innerHTML += `<div>${new Date().toLocaleTimeString()} — ${text}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function setConnected(connected) {
+            document.getElementById("btnConnect").disabled = connected;
+            document.getElementById("btnDisconnect").disabled = !connected;
+            document.getElementById("btnSend").disabled = !connected;
+            msgInput.disabled = !connected;
+        }
+
+        function connect() {
+            // Автоматически подставляем текущий хост и порт сервера
+            const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+            ws = new WebSocket(`${protocol}//${location.host}/ws`);
+            ws.binaryType = "arraybuffer";
+
+            ws.onopen = () => {
+                log("<b>Подключено к серверу</b>");
+                setConnected(true);
+            };
+
+            ws.onmessage = (event) => {
+                let decoded = MessagePack.decode(event.data);
+                log(`Сервер: ${JSON.stringify(decoded)}`)
+            };
+
+            ws.onclose = () => {
+                log("<b>Соединение закрыто</b>");
+                setConnected(false);
+            };
+
+            ws.onerror = () => log("<span style='color:red'>Ошибка соединения</span>");
+        }
+
+        function disconnect() {
+            if (ws)
+                ws.close();
+        }
+
+        function sendMsg() {
+            if (ws && msgInput.value) {
+                let data = JSON.parse(msgInput.value);
+                data.parameters = JSON.stringify(data.parameters);
+
+                ws.send(MessagePack.encode(data));
+                log(`Вы: ${msgInput.value}`);
+                //msgInput.value = "";
+            }
+        }
+
+        function sendMsg(command) {
+            if (ws && command) {
+                let data = { ...command };
+                data.parameters = JSON.stringify(data.parameters);
+
+                ws.send(MessagePack.encode(data));
+                log(`Вы: ${JSON.stringify(command)}`);
+            }
+        }
+
+        msgInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") sendMsg();
+        });
+
+    </script>
+</body>
+</html>
